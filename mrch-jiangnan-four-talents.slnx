@@ -1,0 +1,8 @@
+﻿<Solution>
+  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="Runtime.csproj" />
+  <Project Path="DOTween.Modules.csproj" />
+  <Project Path="SimpleFolderIcon.csproj" />
+  <Project Path="Sirenix.OdinInspector.Modules.UnityMathematics.csproj" />
+  <Project Path="Bridge.csproj" />
+</Solution>
