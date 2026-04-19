@@ -1,4 +1,4 @@
-﻿/*===============================================================================
+/*===============================================================================
 Copyright (C) 2024 Immersal - Part of Hexagon. All Rights Reserved.
 
 This file is part of the Immersal SDK.
@@ -52,7 +52,7 @@ namespace Immersal.Samples.Navigation
         {
             button = GetComponent<Button>();
             mainCamera = Camera.main;
-            arspace = FindObjectOfType<XRSpace>();
+            arspace = FindFirstObjectByType<XRSpace>();
         }
 
         void Update()

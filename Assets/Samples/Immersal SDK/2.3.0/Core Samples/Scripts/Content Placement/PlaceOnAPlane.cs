@@ -1,4 +1,4 @@
-﻿/*===============================================================================
+/*===============================================================================
 Copyright (C) 2024 Immersal - Part of Hexagon. All Rights Reserved.
 
 This file is part of the Immersal SDK.
@@ -28,7 +28,7 @@ namespace Immersal.Samples.ContentPlacement
         public void Place(int index)
         {
             Transform cam = Camera.main?.transform;
-            m_XRSpace = FindObjectOfType<XRSpace>();
+            m_XRSpace = FindFirstObjectByType<XRSpace>();
 
             if (cam != null && m_objects[index] != null && m_XRSpace != null)
             {

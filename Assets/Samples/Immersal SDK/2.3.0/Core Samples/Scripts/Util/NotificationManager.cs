@@ -1,4 +1,4 @@
-﻿/*===============================================================================
+/*===============================================================================
 Copyright (C) 2024 Immersal - Part of Hexagon. All Rights Reserved.
 
 This file is part of the Immersal SDK.
@@ -27,7 +27,7 @@ namespace Immersal.Samples.Util
 #if UNITY_EDITOR
                 if (instance == null && !Application.isPlaying)
                 {
-                    instance = UnityEngine.Object.FindObjectOfType<NotificationManager>();
+                    instance = UnityEngine.Object.FindFirstObjectByType<NotificationManager>();
                 }
 #endif
                 if (instance == null)

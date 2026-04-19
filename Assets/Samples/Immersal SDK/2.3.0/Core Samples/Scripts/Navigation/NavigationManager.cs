@@ -1,4 +1,4 @@
-﻿/*===============================================================================
+/*===============================================================================
 Copyright (C) 2024 Immersal - Part of Hexagon. All Rights Reserved.
 
 This file is part of the Immersal SDK.
@@ -98,7 +98,7 @@ namespace Immersal.Samples.Navigation
 #if UNITY_EDITOR
                 if (instance == null && !Application.isPlaying)
                 {
-                    instance = FindObjectOfType<NavigationManager>();
+                    instance = FindFirstObjectByType<NavigationManager>();
                 }
 #endif
                 if (instance == null)
@@ -350,7 +350,7 @@ namespace Immersal.Samples.Navigation
         {
             if (m_XRSpace == null)
             {
-                m_XRSpace = FindObjectOfType<XRSpace>();
+                m_XRSpace = FindFirstObjectByType<XRSpace>();
 
                 if (m_XRSpace == null)
                 {
