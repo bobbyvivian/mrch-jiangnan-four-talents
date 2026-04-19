@@ -23,6 +23,8 @@ public class UIMagnifier : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
         public string name;
         public RectTransform point;
         public float radius = 40f;
+        [Tooltip("How many seconds the lens must stay on this hotspot before it is recognized.")]
+        public float dwellTime = 0f;
         [Tooltip("These UI objects will be shown when the lens focuses this hotspot.")]
         public GameObject[] targets;
         public bool hideWhenNotFocused = true;
@@ -36,8 +38,11 @@ public class UIMagnifier : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
         public HotspotStep[] onLoseFocusSequence;
 
         [NonSerialized] public bool isActive;
+        [NonSerialized] public bool hasBeenRecognized;
+        [NonSerialized] public bool hasTriggeredOnce;
         [NonSerialized] public Coroutine autoHideRoutine;
         [NonSerialized] public Coroutine sequenceRoutine;
+        [NonSerialized] public float dwellTimer;
     }
 
     [Header("Drag")]
@@ -53,6 +58,7 @@ public class UIMagnifier : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
 
     [Header("Hotspots")]
     [SerializeField] private Hotspot[] hotspots;
+    [SerializeField] private bool enforceHotspotOrder = true;
 
     private RectTransform _rectTransform;
     private RectTransform _parentRect;
@@ -61,6 +67,8 @@ public class UIMagnifier : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
     private Vector2 _dragOffset;
     private float _lastMoveTime;
     private bool _isDragging;
+    private int _nextHotspotIndexToRecognize;
+    private int _runningHotspotIndex = -1;
 
     private void Awake()
     {
@@ -169,89 +177,85 @@ public class UIMagnifier : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
     private void UpdateHotspots()
     {
         if (sourceRect == null || hotspots == null) return;
+        if (_runningHotspotIndex != -1) return;
+        if (_nextHotspotIndexToRecognize < 0 || _nextHotspotIndexToRecognize >= hotspots.Length) return;
 
         Vector2 focusLocalPoint = GetLensCenterOnSource();
+        Hotspot hotspot = hotspots[_nextHotspotIndexToRecognize];
+        if (hotspot == null || hotspot.point == null) return;
+        if (hotspot.hasTriggeredOnce) return;
 
-        for (int i = 0; i < hotspots.Length; i++)
+        Vector2 hotspotLocalPoint = WorldPointToSourceLocal(hotspot.point.position);
+        bool inRange = Vector2.Distance(focusLocalPoint, hotspotLocalPoint) <= hotspot.radius;
+        if (!inRange)
         {
-            Hotspot hotspot = hotspots[i];
-            if (hotspot == null || hotspot.point == null) continue;
-
-            Vector2 hotspotLocalPoint = WorldPointToSourceLocal(hotspot.point.position);
-            bool shouldActivate = Vector2.Distance(focusLocalPoint, hotspotLocalPoint) <= hotspot.radius;
-
-            if (shouldActivate == hotspot.isActive) continue;
-
-            hotspot.isActive = shouldActivate;
-            HandleHotspotStateChanged(hotspot, shouldActivate);
+            hotspot.dwellTimer = 0f;
+            return;
         }
+
+        if (hotspot.dwellTime > 0f)
+        {
+            hotspot.dwellTimer += Time.unscaledDeltaTime;
+            if (hotspot.dwellTimer < hotspot.dwellTime) return;
+        }
+
+        hotspot.dwellTimer = 0f;
+        StartHotspotFlow(_nextHotspotIndexToRecognize, hotspot);
     }
 
-    private void HandleHotspotStateChanged(Hotspot hotspot, bool shouldActivate)
+    private void StartHotspotFlow(int hotspotIndex, Hotspot hotspot)
     {
-        if (shouldActivate)
+        hotspot.isActive = true;
+        hotspot.hasBeenRecognized = true;
+        hotspot.hasTriggeredOnce = true;
+        _runningHotspotIndex = hotspotIndex;
+
+        if (hotspot.sequenceRoutine != null)
         {
-            if (hotspot.sequenceRoutine != null)
-            {
-                StopCoroutine(hotspot.sequenceRoutine);
-                hotspot.sequenceRoutine = null;
-            }
+            StopCoroutine(hotspot.sequenceRoutine);
+            hotspot.sequenceRoutine = null;
+        }
 
-            if (HasSequence(hotspot.onFocusSequence))
-            {
-                hotspot.sequenceRoutine = StartCoroutine(RunSequence(hotspot.onFocusSequence, hotspot));
-            }
-            else
-            {
-                SetTargetsActive(hotspot.targets, true);
-            }
+        if (hotspot.autoHideRoutine != null)
+        {
+            StopCoroutine(hotspot.autoHideRoutine);
+            hotspot.autoHideRoutine = null;
+        }
 
-            if (hotspot.autoHideRoutine != null)
-            {
-                StopCoroutine(hotspot.autoHideRoutine);
-                hotspot.autoHideRoutine = null;
-            }
+        hotspot.sequenceRoutine = StartCoroutine(RunHotspotFlow(hotspotIndex, hotspot));
+    }
 
-            if (hotspot.autoHideDelay > 0f)
-            {
-                hotspot.autoHideRoutine = StartCoroutine(AutoHideAfterDelay(hotspot));
-            }
+    private IEnumerator RunHotspotFlow(int hotspotIndex, Hotspot hotspot)
+    {
+        if (HasSequence(hotspot.onFocusSequence))
+        {
+            yield return RunSequence(hotspot.onFocusSequence);
         }
         else
         {
-            if (hotspot.sequenceRoutine != null)
-            {
-                StopCoroutine(hotspot.sequenceRoutine);
-                hotspot.sequenceRoutine = null;
-            }
+            SetTargetsActive(hotspot.targets, true);
 
-            if (HasSequence(hotspot.onLoseFocusSequence))
+            if (hotspot.autoHideDelay > 0f)
             {
-                hotspot.sequenceRoutine = StartCoroutine(RunSequence(hotspot.onLoseFocusSequence, hotspot));
-            }
-            else if (hotspot.hideWhenNotFocused)
-            {
-                SetTargetsActive(hotspot.targets, false);
-            }
+                yield return new WaitForSecondsRealtime(hotspot.autoHideDelay);
 
-            if (hotspot.autoHideRoutine != null)
-            {
-                StopCoroutine(hotspot.autoHideRoutine);
-                hotspot.autoHideRoutine = null;
+                GameObject[] delayedTargets = hotspot.autoHideTargets != null && hotspot.autoHideTargets.Length > 0
+                    ? hotspot.autoHideTargets
+                    : hotspot.targets;
+
+                SetTargetsActive(delayedTargets, false);
             }
         }
-    }
 
-    private IEnumerator AutoHideAfterDelay(Hotspot hotspot)
-    {
-        yield return new WaitForSecondsRealtime(hotspot.autoHideDelay);
-
-        GameObject[] delayedTargets = hotspot.autoHideTargets != null && hotspot.autoHideTargets.Length > 0
-            ? hotspot.autoHideTargets
-            : hotspot.targets;
-
-        SetTargetsActive(delayedTargets, false);
+        hotspot.isActive = false;
+        hotspot.sequenceRoutine = null;
         hotspot.autoHideRoutine = null;
+        _runningHotspotIndex = -1;
+
+        if (enforceHotspotOrder)
+        {
+            _nextHotspotIndexToRecognize = hotspotIndex + 1;
+        }
     }
 
     private static bool HasSequence(HotspotStep[] sequence)
@@ -259,7 +263,7 @@ public class UIMagnifier : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
         return sequence != null && sequence.Length > 0;
     }
 
-    private IEnumerator RunSequence(HotspotStep[] sequence, Hotspot hotspot)
+    private IEnumerator RunSequence(HotspotStep[] sequence)
     {
         for (int i = 0; i < sequence.Length; i++)
         {
@@ -276,8 +280,6 @@ public class UIMagnifier : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
                 step.target.SetActive(step.setActive);
             }
         }
-
-        hotspot.sequenceRoutine = null;
     }
 
     private static void SetTargetsActive(GameObject[] targets, bool active)
@@ -332,5 +334,36 @@ public class UIMagnifier : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
         _lastMoveTime = Time.unscaledTime;
         UpdateMagnifiedView();
         UpdateHotspots();
+    }
+
+    public void ResetHotspotRecognitionOrder()
+    {
+        if (hotspots == null) return;
+
+        _nextHotspotIndexToRecognize = 0;
+        _runningHotspotIndex = -1;
+
+        for (int i = 0; i < hotspots.Length; i++)
+        {
+            Hotspot hotspot = hotspots[i];
+            if (hotspot == null) continue;
+
+            hotspot.hasBeenRecognized = false;
+            hotspot.hasTriggeredOnce = false;
+            hotspot.isActive = false;
+            hotspot.dwellTimer = 0f;
+
+            if (hotspot.sequenceRoutine != null)
+            {
+                StopCoroutine(hotspot.sequenceRoutine);
+                hotspot.sequenceRoutine = null;
+            }
+
+            if (hotspot.autoHideRoutine != null)
+            {
+                StopCoroutine(hotspot.autoHideRoutine);
+                hotspot.autoHideRoutine = null;
+            }
+        }
     }
 }
