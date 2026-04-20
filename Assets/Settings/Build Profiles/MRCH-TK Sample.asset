@@ -20,8 +20,10 @@ MonoBehaviour:
     rid: 1643849195645829315
   m_OverrideGlobalSceneList: 1
   m_Scenes:
-  - m_enabled: 1
+  - m_enabled: 0
     m_path: Assets/Samples/MRCH Toolkit/2.0.0/MRCH Toolkit Samples/Scenes/MRCH-Sample.unity
+  - m_enabled: 1
+    m_path: Assets/Samples/MRCH Toolkit/2.0.0/MRCH Toolkit Samples/Scenes/TheSun/TheSunScene.unity
   m_ScriptingDefines: []
   m_PlayerSettingsYaml:
     m_Settings: []
