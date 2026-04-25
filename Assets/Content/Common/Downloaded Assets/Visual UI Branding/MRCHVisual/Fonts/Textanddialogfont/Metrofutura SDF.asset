@@ -158,7 +158,7 @@ MonoBehaviour:
     atlasWidth: 512
     atlasHeight: 512
     characterSetSelectionMode: 7
-    characterSequence: " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]_`abcdefghijklmnopqrstuvwxyz{|}\_\u6F2B\u756B\u754C"
+    characterSequence: " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]_`abcdefghijklmnopqrstuvwxyz{|}\_\u6F2B\u756B\u754C\u5C0D\u5C0F\u8173\u7684\u8AAA:\u73FE\u5728\u60A8\u7684\u77E5\u5DF2\u6BD4\u6211\u591A\u4E86\u6881\u767D\u6CE2\u5927\u89C2\u56ED"
     referencedFontAssetGUID: 2b69ad98fbadbf8498acbdce1d2611b4
     referencedTextAssetGUID: 
     fontStyle: 0
