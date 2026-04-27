@@ -15,6 +15,10 @@ public class UIMagnifier : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
         public GameObject target;
         [Tooltip("The active state to apply to the target in this step.")]
         public bool setActive = true;
+        [Tooltip("Play an audio source when this step runs.")]
+        public bool playAudio;
+        [Tooltip("Optional audio source for this step. If empty, the default audio source on UIMagnifier will be used.")]
+        public AudioSource audioSource;
     }
 
     [Serializable]
@@ -59,6 +63,9 @@ public class UIMagnifier : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
     [Header("Hotspots")]
     [SerializeField] private Hotspot[] hotspots;
     [SerializeField] private bool enforceHotspotOrder = true;
+
+    [Header("Audio")]
+    [SerializeField] private AudioSource audioSource;
 
     private RectTransform _rectTransform;
     private RectTransform _parentRect;
@@ -278,6 +285,15 @@ public class UIMagnifier : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
             if (step.target != null)
             {
                 step.target.SetActive(step.setActive);
+            }
+
+            if (step.playAudio)
+            {
+                AudioSource sourceToPlay = step.audioSource != null ? step.audioSource : audioSource;
+                if (sourceToPlay != null)
+                {
+                    sourceToPlay.Play();
+                }
             }
         }
     }
